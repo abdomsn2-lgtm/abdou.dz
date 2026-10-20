@@ -535,7 +535,7 @@
         <div id="adminOrdersList"></div>
     </div>
 
-    <!-- Settings Tab (Logo Upload) -->
+    <!-- Settings Tab (Logo Upload + Password Change) -->
     <div class="admin-tab-content" id="tab-settings">
         <div class="field">
             <label data-i18n="f_logo"></label>
@@ -548,6 +548,20 @@
         </div>
         <button class="submit-btn" onclick="saveLogo()" id="logoSaveBtn" data-i18n="admin_save_logo"></button>
         <button class="btn-del" onclick="removeLogo()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;" data-i18n="admin_remove_logo"></button>
+        
+        <!-- قسم تغيير كلمة السر -->
+        <div style="border-top:1px solid var(--border); margin-top:20px; padding-top:20px;">
+            <h4 style="color:var(--gold); margin-bottom:12px; text-align:center;">🔐 تغيير كلمة السر</h4>
+            <div class="field">
+                <label>كلمة السر الحالية</label>
+                <input type="password" id="currentPass" placeholder="••••••">
+            </div>
+            <div class="field">
+                <label>كلمة السر الجديدة</label>
+                <input type="password" id="newPass" placeholder="••••••">
+            </div>
+            <button class="submit-btn" style="background:linear-gradient(135deg,var(--success),#1e8449);" onclick="changeAdminPassword()">💾 حفظ كلمة السر الجديدة</button>
+        </div>
     </div>
 
     <button class="btn-del" onclick="closeAll()" style="width:100%;margin-top:16px;padding:12px;border-radius:10px;font-size:.9rem;" data-i18n="admin_close"></button>
@@ -558,10 +572,16 @@
 <script>
     /* ================= الإعدادات ================= */
     const WHATSAPP_NUMBER = "213553893600";
-    const SUPABASE_URL = "https://yugguxdrygbbbfgkizch.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_tUeMxt2zY7mBN_P8IEtnMQ_9t5Vx97m";// ← الصق المفتاح كاملاً
-    const ADMIN_PASSWORD = "abdou2026ms";
+    // الرابط الخاص بمشروعك الجديد (كما يظهر في صورتك)
+    const SUPABASE_URL = "https://hgkdhjmpqgcrajllieq.supabase.co";
+    // المفتاح العام الجديد الذي أرسلته
+    const SUPABASE_KEY = "sb_publishable_8CpKGLUQCPgSEumS4D4UIQ_NRpS56G3"; 
     const STORAGE_BUCKET = "products";
+
+    /* ================= إدارة كلمة السر ================= */
+    function getAdminPassword() {
+        return localStorage.getItem("abdou_admin_pass") || "abdou2026ms";
+    }
 
     /* ================= الترجمة ================= */
     const I18N = {
@@ -727,7 +747,11 @@
 
     /* ================= Supabase ================= */
     let sb = null;
-    try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){ console.error(e); }
+    try { 
+        sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: { persistSession: false }
+        }); 
+    } catch(e){ console.error("Supabase init error:", e); }
 
     /* ================= الحالة ================= */
     let PRODUCTS = [];
@@ -760,7 +784,6 @@
       ];
       if(url){
         imgs.forEach(img => { img.src = url; img.classList.add("show"); });
-        // تحديث favicon
         const fav = document.getElementById("faviconLink");
         if(fav) fav.href = url;
       } else {
@@ -783,7 +806,6 @@
 
     async function saveLogo(){
       if(!pendingLogoFile){
-        // لو ما اختارش صورة جديدة، نستخدم الحالية
         if(!currentLogoUrl){ showToast("⚠️"); return; }
         applyLogo(currentLogoUrl);
         showToast(t("logo_saved"), "success");
@@ -971,7 +993,7 @@
           subtotal, shipping, total,
           status: "قيد المراجعة"
         });
-      }catch(err){ console.error(err); }
+      }catch(err){ console.error("Order insert error:", err); }
 
       const orders = JSON.parse(localStorage.getItem("abdou_orders") || "[]");
       orders.push(order);
@@ -1068,12 +1090,15 @@
     }
 
     function checkAdmin(){
-      if(document.getElementById("adminPass").value === ADMIN_PASSWORD){
+      if(document.getElementById("adminPass").value === getAdminPassword()){
         closeAll();
         document.getElementById("overlay").classList.add("open");
         document.getElementById("adminPanel").classList.add("open");
         loadAdminData();
-        // تعبئة معاينة اللوغو الحالي
+        
+        document.getElementById("currentPass").value = "";
+        document.getElementById("newPass").value = "";
+
         const preview = document.getElementById("logoPickerPreview");
         if(currentLogoUrl){ preview.src = currentLogoUrl; preview.classList.add("show"); }
         else preview.classList.remove("show");
@@ -1081,6 +1106,27 @@
       } else {
         showToast(t("admin_wrong"));
       }
+    }
+
+    function changeAdminPassword() {
+        const current = document.getElementById("currentPass").value;
+        const newPass = document.getElementById("newPass").value;
+
+        if (current !== getAdminPassword()) {
+            showToast("❌ كلمة السر الحالية غير صحيحة");
+            return;
+        }
+
+        if (newPass.length < 4) {
+            showToast("⚠️ كلمة السر الجديدة يجب أن تكون 4 أحرف على الأقل");
+            return;
+        }
+
+        localStorage.setItem("abdou_admin_pass", newPass);
+        
+        document.getElementById("currentPass").value = "";
+        document.getElementById("newPass").value = "";
+        showToast("✅ تم تغيير كلمة السر بنجاح", "success");
     }
 
     function switchAdminTab(tab, el){
@@ -1193,16 +1239,29 @@
       };
       reader.readAsDataURL(file);
     }
+    
     async function uploadImage(file){
-      const ext = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-      const { data, error } = await sb.storage.from(STORAGE_BUCKET).upload(fileName, file, {
-        cacheControl: "3600", upsert: false
-      });
-      if(error) throw error;
-      const { data: urlData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
-      return urlData.publicUrl;
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const ext = file.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+        
+        const { data, error } = await sb.storage.from(STORAGE_BUCKET).upload(fileName, arrayBuffer, {
+          contentType: file.type,
+          cacheControl: "3600", 
+          upsert: false
+        });
+        
+        if(error) throw error;
+        
+        const { data: urlData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
+        return urlData.publicUrl;
+      } catch (err) {
+        console.error("Upload Error Details:", err);
+        throw err;
+      }
     }
+
     async function saveProduct(){
       const name = document.getElementById("pName").value.trim();
       const price = Number(document.getElementById("pPrice").value);

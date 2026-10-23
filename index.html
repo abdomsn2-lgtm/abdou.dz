@@ -1285,17 +1285,34 @@
         editingProductId = null; uploadedImageUrl = null;
     }
     function editProduct(id){
-        const p = PRODUCTS.find(x => x.id === id);
-        if(!p) return;
-        editingProductId = id;
-        uploadedImageUrl = p.image_url || null;
-        document.getElementById("pName").value = p.name;
-        document.getElementById("pPrice").value = p.price;
-        const preview = document.getElementById("pImagePreview");
-        if(p.image_url){ preview.src = p.image_url; preview.classList.add("show"); }
-        else preview.classList.remove("show");
-        document.getElementById("adminProductForm").style.display = "block";
+    // 1. البحث عن المنتج في القائمة المحلية
+    const p = PRODUCTS.find(x => x.id === id);
+
+    // 2. إذا لم يتم العثور على المنتج، أظهر رسالة وقم بتحديث القائمة
+    if(!p) {
+        showToast("⚠️ هذا المنتج لم يعد موجوداً، جاري تحديث القائمة...", "error");
+        loadProducts(); // إعادة تحميل المنتجات من Appwrite
+        loadAdminData(); // تحديث لوحة التحكم
+        return;
     }
+
+    // 3. إذا كان المنتج موجوداً، املأ الحقول
+    editingProductId = id;
+    uploadedImageUrl = p.image_url || null;
+    document.getElementById("pName").value = p.name;
+    document.getElementById("pPrice").value = p.price;
+
+    const preview = document.getElementById("pImagePreview");
+    if(p.image_url){
+        preview.src = p.image_url;
+        preview.classList.add("show");
+    } else {
+        preview.classList.remove("show");
+    }
+
+    // 4. إظهار نموذج التعديل
+    document.getElementById("adminProductForm").style.display = "block";
+}
     function previewImage(e){
         const file = e.target.files[0];
         if(!file) return;
@@ -1389,7 +1406,7 @@
     function showToast(msg, type){
         const el = document.getElementById("toast");
         el.textContent = msg;
-        el.className = "toast show" + (type ? " " + type : "");
+        el.className = "toast show"+ (type ? " " + type : "");
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
     }

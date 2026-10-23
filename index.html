@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ABDOU DZ | الفخامة الذهبية</title>
     <link id="faviconLink" rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- استيراد مكتبة Appwrite -->
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
     <style>
         :root{
           --gold:#d4af37;
@@ -307,7 +308,6 @@
         }
         .image-preview.show{display:block;}
 
-        /* Logo picker (larger preview) */
         .logo-picker-preview{
           width:120px;height:120px;object-fit:contain;border-radius:50%;
           background:var(--black);border:2px solid var(--gold);
@@ -353,6 +353,34 @@
           .admin-product{flex-wrap:wrap;}
           .logo-img{width:40px;height:40px;}
           .logo-text{font-size:1.3rem;}
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 5px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .settings-grid-item {
+            background: var(--black-3);
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .settings-grid-item label {
+            font-size: 0.75rem;
+            display: block;
+            margin-bottom: 4px;
+            color: var(--gold-light);
+        }
+        .settings-grid-item input {
+            padding: 5px;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
         }
     </style>
 </head>
@@ -405,10 +433,10 @@
         <h2 class="section-title" data-i18n="contact_title"></h2>
         <div class="gold-line"></div>
         <p class="section-sub">
-    📞 <strong style="color:var(--gold);">0553893600</strong><br>
-    📸 <a href="https://instagram.com/abdo._ms_" target="_blank" style="color:var(--gold);font-weight:700;">@abdo._ms_</a><br>
-    📍 <span data-i18n="contact_location"></span>
-</p>
+            📞 <strong style="color:var(--gold);">0553893600</strong><br>
+            📸 <a href="https://instagram.com/abdo._ms_" target="_blank" style="color:var(--gold);font-weight:700;">@abdo._ms_</a><br>
+            📍 <span data-i18n="contact_location"></span>
+        </p>
 </div>
 
 <div id="trackView" style="display:none;">
@@ -461,6 +489,16 @@
             <label data-i18n="f_address"></label>
             <textarea id="cAddress" rows="2" required></textarea>
         </div>
+
+        <!-- خيارات التوصيل -->
+        <div class="field">
+            <label data-i18n="f_delivery"></label>
+            <select id="cDelivery" required onchange="renderOrderSummary()">
+                <option value="home" data-i18n="delivery_home"></option>
+                <option value="office" data-i18n="delivery_office"></option>
+            </select>
+        </div>
+
         <div class="field">
             <label data-i18n="f_qty"></label>
             <input type="number" id="cQty" value="1" min="1" required onchange="renderOrderSummary()" oninput="renderOrderSummary()">
@@ -535,8 +573,9 @@
         <div id="adminOrdersList"></div>
     </div>
 
-    <!-- Settings Tab (Logo Upload + Password Change) -->
+    <!-- Settings Tab -->
     <div class="admin-tab-content" id="tab-settings">
+        <!-- Logo Upload -->
         <div class="field">
             <label data-i18n="f_logo"></label>
             <label class="image-picker" for="logoInput">
@@ -548,8 +587,31 @@
         </div>
         <button class="submit-btn" onclick="saveLogo()" id="logoSaveBtn" data-i18n="admin_save_logo"></button>
         <button class="btn-del" onclick="removeLogo()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;" data-i18n="admin_remove_logo"></button>
-        
-        <!-- قسم تغيير كلمة السر -->
+
+        <!-- Colors Settings -->
+        <div style="border-top:1px solid var(--border); margin-top:20px; padding-top:20px;">
+            <h4 style="color:var(--gold); margin-bottom:12px; text-align:center;">🎨 ألوان الموقع</h4>
+            <div class="field">
+                <label>اللون الأساسي (الذهبي)</label>
+                <input type="color" id="colorGold" value="#d4af37" style="height: 50px; padding: 5px;">
+            </div>
+            <div class="field">
+                <label>لون الخلفية (الأسود)</label>
+                <input type="color" id="colorBlack" value="#0a0a0a" style="height: 50px; padding: 5px;">
+            </div>
+            <button class="submit-btn" onclick="saveColors()" style="background:linear-gradient(135deg,var(--success),#1e8449);">💾 حفظ الألوان</button>
+        </div>
+
+        <!-- Delivery Settings -->
+        <div style="border-top:1px solid var(--border); margin-top:20px; padding-top:20px;">
+            <h4 style="color:var(--gold); margin-bottom:12px; text-align:center;">🚚 إعدادات التوصيل (69 ولاية)</h4>
+            <div class="settings-grid" id="deliverySettingsGrid">
+                <!-- سيتم تعبئتها بالجافاسكريبت -->
+            </div>
+            <button class="submit-btn" onclick="saveDeliverySettings()" style="background:linear-gradient(135deg,var(--success),#1e8449); margin-top: 10px;">💾 حفظ أسعار التوصيل</button>
+        </div>
+
+        <!-- Password Change -->
         <div style="border-top:1px solid var(--border); margin-top:20px; padding-top:20px;">
             <h4 style="color:var(--gold); margin-bottom:12px; text-align:center;">🔐 تغيير كلمة السر</h4>
             <div class="field">
@@ -570,20 +632,30 @@
 <div class="toast" id="toast"></div>
 
 <script>
-    /* ================= الإعدادات ================= */
-    const WHATSAPP_NUMBER = "213553893600";
-    // الرابط الخاص بمشروعك الجديد (كما يظهر في صورتك)
-    const SUPABASE_URL = "https://hgkdhjmpqgcrajllieq.supabase.co";
-    // المفتاح العام الجديد الذي أرسلته
-    const SUPABASE_KEY = "sb_publishable_8CpKGLUQCPgSEumS4D4UIQ_NRpS56G3"; 
-    const STORAGE_BUCKET = "products";
+    /* ================= إعدادات Appwrite ================= */
+    const APPWRITE_ENDPOINT = 'https://nyc.cloud.appwrite.io/v1';
+    const APPWRITE_PROJECT_ID = '6adae74a000825db0ff4';
+    // تم إزالة المفتاح السري لحل مشكلة الشاشة السوداء والاعتماد على الصلاحيات العامة
+     const DATABASE_ID = '6adae7e4003b77bb09a2';
+    const TABLE_ID = '6adae81900276d7c4952';
+    const BUCKET_ID = '6adaea980004b9c6b1fa';
 
-    /* ================= إدارة كلمة السر ================= */
+    // تهيئة Appwrite
+    const { Client, Databases, Storage, ID, Query } = Appwrite;
+    const client = new Client()
+        .setEndpoint(APPWRITE_ENDPOINT)
+        .setProject(APPWRITE_PROJECT_ID);
+
+    const databases = new Databases(client);
+    const storage = new Storage(client);
+
+    /* ================= باقي الكود (الترجمة، الولايات، إلخ) ================= */
+    const WHATSAPP_NUMBER = "213553893600";
+
     function getAdminPassword() {
         return localStorage.getItem("abdou_admin_pass") || "abdou2026ms";
     }
 
-    /* ================= الترجمة ================= */
     const I18N = {
       ar:{
         nav_home:"الرئيسية",nav_products:"المنتجات",nav_track:"تتبع الطلب",nav_contact:"اتصل بنا",
@@ -596,6 +668,9 @@
         order_title:"أكمل طلبك",f_name:"الاسم الكامل *",f_phone:"رقم الهاتف *",f_wilaya:"الولاية *",f_wilaya_choose:"اختر الولاية",
         f_commune:"البلدية *",f_commune_choose:"اختر البلدية",f_address:"العنوان الكامل *",f_qty:"الكمية *",f_image:"صورة المنتج",
         f_logo:"لوغو المتجر",
+        f_delivery:"طريقة التوصيل *",
+        delivery_home:"🏠 توصيل إلى المنزل",
+        delivery_office:"🏢 توصيل إلى المكتب",
         tap_to_upload:"اضغط لاختيار صورة من هاتفك",
         tap_to_upload_logo:"اضغط لاختيار اللوغو من هاتفك",
         cod_only:"💵 الدفع عند الاستلام فقط",
@@ -628,6 +703,9 @@
         order_title:"Finalisez votre commande",f_name:"Nom complet *",f_phone:"Téléphone *",f_wilaya:"Wilaya *",f_wilaya_choose:"Choisir wilaya",
         f_commune:"Commune *",f_commune_choose:"Choisir commune",f_address:"Adresse *",f_qty:"Quantité *",f_image:"Photo du produit",
         f_logo:"Logo de la boutique",
+        f_delivery:"Mode de livraison *",
+        delivery_home:"🏠 Livraison à domicile",
+        delivery_office:"🏢 Livraison au bureau",
         tap_to_upload:"Appuyez pour choisir une photo",
         tap_to_upload_logo:"Appuyez pour choisir le logo",
         cod_only:"💵 Paiement à la livraison uniquement",
@@ -745,591 +823,582 @@
       "69 - الأبيض سيدي الشيخ": ["الأبيض سيدي الشيخ","البنود","الحجيرة","شيخة","بوعلام"]
     };
 
-    /* ================= Supabase ================= */
-    let sb = null;
-    try { 
-        sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-            auth: { persistSession: false }
-        }); 
-    } catch(e){ console.error("Supabase init error:", e); }
-
-    /* ================= الحالة ================= */
+    /* ================= البيانات المحلية ================= */
     let PRODUCTS = [];
-    let ORDERS = [];
-    let lastOrder = null;
+    let ORDERS = JSON.parse(localStorage.getItem("abdou_orders") || "[]");
+    let DELIVERY_PRICES = JSON.parse(localStorage.getItem("abdou_delivery_prices") || "{}");
     let currentProduct = null;
     let editingProductId = null;
     let uploadedImageUrl = null;
-    let currentLogoUrl = null;
+    let currentLogoUrl = localStorage.getItem("abdou_logo") || null;
     let pendingLogoFile = null;
 
+    /* ================= الألوان ================= */
+    function loadColors() {
+        const gold = localStorage.getItem("abdou_color_gold") || "#d4af37";
+        const black = localStorage.getItem("abdou_color_black") || "#0a0a0a";
+        document.documentElement.style.setProperty('--gold', gold);
+        document.documentElement.style.setProperty('--black', black);
+        document.getElementById("colorGold").value = gold;
+        document.getElementById("colorBlack").value = black;
+    }
+
+    function saveColors() {
+        const gold = document.getElementById("colorGold").value;
+        const black = document.getElementById("colorBlack").value;
+        localStorage.setItem("abdou_color_gold", gold);
+        localStorage.setItem("abdou_color_black", black);
+        loadColors();
+        showToast("✅ تم حفظ الألوان بنجاح", "success");
+    }
+
+    /* ================= التوصيل ================= */
+    function loadDeliverySettings() {
+        const grid = document.getElementById("deliverySettingsGrid");
+        if(!grid) return;
+        grid.innerHTML = "";
+        Object.keys(WILAYAS_DATA).forEach(w => {
+            const prices = DELIVERY_PRICES[w] || { home: 500, office: 300 };
+            grid.innerHTML += `
+                <div class="settings-grid-item">
+                    <label>${w}</label>
+                    <input type="number" id="del_home_${w.replace(/[^a-zA-Z0-9]/g, '')}" value="${prices.home}" placeholder="سعر المنزل" title="سعر المنزل">
+                    <input type="number" id="del_office_${w.replace(/[^a-zA-Z0-9]/g, '')}" value="${prices.office}" placeholder="سعر المكتب" title="سعر المكتب">
+                </div>
+            `;
+        });
+    }
+
+    function saveDeliverySettings() {
+        const newPrices = {};
+        Object.keys(WILAYAS_DATA).forEach(w => {
+            const safeId = w.replace(/[^a-zA-Z0-9]/g, '');
+            const home = Number(document.getElementById(`del_home_${safeId}`).value) || 0;
+            const office = Number(document.getElementById(`del_office_${safeId}`).value) || 0;
+            newPrices[w] = { home, office };
+        });
+        DELIVERY_PRICES = newPrices;
+        localStorage.setItem("abdou_delivery_prices", JSON.stringify(DELIVERY_PRICES));
+        showToast("✅ تم حفظ أسعار التوصيل بنجاح", "success");
+    }
+
     /* ================= اللوغو ================= */
-    async function loadLogo(){
-      try{
-        const { data, error } = await sb.from("settings").select("value").eq("key", "logo_url").maybeSingle();
-        if(error) throw error;
-        const url = data && data.value ? data.value : "";
-        applyLogo(url);
-      }catch(e){
-        console.error("loadLogo error:", e);
-      }
+    function loadLogo(){
+        applyLogo(currentLogoUrl);
     }
 
     function applyLogo(url){
-      currentLogoUrl = url || null;
-      const imgs = [
-        document.getElementById("headerLogo"),
-        document.getElementById("heroLogo"),
-        document.getElementById("footerLogo")
-      ];
-      if(url){
-        imgs.forEach(img => { img.src = url; img.classList.add("show"); });
-        const fav = document.getElementById("faviconLink");
-        if(fav) fav.href = url;
-      } else {
-        imgs.forEach(img => { img.src = ""; img.classList.remove("show"); });
-      }
+        const imgs = [
+            document.getElementById("headerLogo"),
+            document.getElementById("heroLogo"),
+            document.getElementById("footerLogo")
+        ];
+        if(url){
+            imgs.forEach(img => { img.src = url; img.classList.add("show"); });
+            const fav = document.getElementById("faviconLink");
+            if(fav) fav.href = url;
+        } else {
+            imgs.forEach(img => { img.src = ""; img.classList.remove("show"); });
+        }
     }
 
     function previewLogo(e){
-      const file = e.target.files[0];
-      if(!file) return;
-      pendingLogoFile = file;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        const preview = document.getElementById("logoPickerPreview");
-        preview.src = ev.target.result;
-        preview.classList.add("show");
-      };
-      reader.readAsDataURL(file);
+        const file = e.target.files[0];
+        if(!file) return;
+        pendingLogoFile = file;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const preview = document.getElementById("logoPickerPreview");
+            preview.src = ev.target.result;
+            preview.classList.add("show");
+        };
+        reader.readAsDataURL(file);
     }
 
-    async function saveLogo(){
-      if(!pendingLogoFile){
-        if(!currentLogoUrl){ showToast("⚠️"); return; }
-        applyLogo(currentLogoUrl);
-        showToast(t("logo_saved"), "success");
-        return;
-      }
+    function saveLogo(){
+        if(!pendingLogoFile){
+            if(!currentLogoUrl){ showToast("⚠️"); return; }
+            applyLogo(currentLogoUrl);
+            showToast(t("logo_saved"), "success");
+            return;
+        }
 
-      const btn = document.getElementById("logoSaveBtn");
-      btn.disabled = true;
-      const originalText = btn.textContent;
-      btn.textContent = t("loading_upload");
-
-      try{
-        const url = await uploadImage(pendingLogoFile);
-        const { error } = await sb.from("settings").upsert({ key:"logo_url", value:url, updated_at:new Date().toISOString() });
-        if(error) throw error;
-        applyLogo(url);
-        pendingLogoFile = null;
-        document.getElementById("logoInput").value = "";
-        showToast(t("logo_saved"), "success");
-      }catch(e){
-        console.error(e);
-        showToast(t("upload_failed") + " " + e.message);
-      }finally{
-        btn.disabled = false;
-        btn.textContent = originalText;
-      }
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const base64 = ev.target.result;
+            localStorage.setItem("abdou_logo", base64);
+            currentLogoUrl = base64;
+            applyLogo(base64);
+            pendingLogoFile = null;
+            document.getElementById("logoInput").value = "";
+            showToast(t("logo_saved"), "success");
+        };
+        reader.readAsDataURL(pendingLogoFile);
     }
 
-    async function removeLogo(){
-      if(!confirm(t("admin_confirm_del"))) return;
-      try{
-        const { error } = await sb.from("settings").upsert({ key:"logo_url", value:"", updated_at:new Date().toISOString() });
-        if(error) throw error;
+    function removeLogo(){
+        if(!confirm(t("admin_confirm_del"))) return;
+        localStorage.removeItem("abdou_logo");
+        currentLogoUrl = null;
         applyLogo("");
         pendingLogoFile = null;
         document.getElementById("logoInput").value = "";
         document.getElementById("logoPickerPreview").classList.remove("show");
         showToast(t("logo_removed"), "success");
-      }catch(e){
-        console.error(e);
-        showToast("❌ " + e.message);
-      }
     }
 
-    /* ================= جلب المنتجات ================= */
+    /* ================= المنتجات (مع Appwrite) ================= */
     async function loadProducts(){
-      const grid = document.getElementById("productsGrid");
-      grid.innerHTML = `<div class="loading">${t("loading_products")}</div>`;
-      try{
-        const { data, error } = await sb.from("products").select("*").eq("active", true).order("id", {ascending:false});
-        if(error) throw error;
-        PRODUCTS = data || [];
-        renderProducts();
-      }catch(err){
-        console.error(err);
-        grid.innerHTML = `<div class="loading" style="color:#e74c3c;">❌</div>`;
-      }
+        const grid = document.getElementById("productsGrid");
+        grid.innerHTML = `<div class="loading">${t("loading_products")}</div>`;
+        try {
+            const response = await databases.listDocuments(DATABASE_ID, TABLE_ID, [
+                Query.equal('active', true)
+            ]);
+            PRODUCTS = response.documents.map(doc => ({
+                id: doc.$id,
+                name: doc.name,
+                price: doc.price,
+                image_url: doc.image_id ? storage.getFileView(BUCKET_ID, doc.image_id).href : null
+            }));
+            renderProducts();
+        } catch (error) {
+            console.error("Error loading products:", error);
+            grid.innerHTML = `<div class="loading" style="color:#e74c3c;">❌ فشل تحميل المنتجات</div>`;
+        }
     }
 
     function renderProducts(){
-      const grid = document.getElementById("productsGrid");
-      if(!grid) return;
-      if(!PRODUCTS.length){
-        grid.innerHTML = `<div class="loading">🛍️ ${t("admin_no_products")}</div>`;
-        return;
-      }
-      grid.innerHTML = PRODUCTS.map(p => {
-        const img = p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : (p.emoji || "📦");
-        return `
-        <div class="card">
-          <div class="card-img">${img}</div>
-          <div class="card-body">
-            <div class="card-title">${p.name}</div>
-            <div class="card-price">${Number(p.price).toLocaleString()} <small>DZD</small></div>
-            <button class="add-btn" onclick="openOrderForm(${p.id})">${t("buy_now")}</button>
-          </div>
-        </div>
-      `}).join("");
+        const grid = document.getElementById("productsGrid");
+        if(!grid) return;
+        if(!PRODUCTS.length){
+            grid.innerHTML = `<div class="loading">🛍️ ${t("admin_no_products")}</div>`;
+            return;
+        }
+        grid.innerHTML = PRODUCTS.map(p => {
+            const img = p.image_url ? `<img src="${p.image_url}" alt="${p.name}">` : (p.emoji || "📦");
+            return `
+            <div class="card">
+              <div class="card-img">${img}</div>
+              <div class="card-body">
+                <div class="card-title">${p.name}</div>
+                <div class="card-price">${Number(p.price).toLocaleString()} <small>DZD</small></div>
+                <button class="add-btn" onclick="openOrderForm('${p.id}')">${t("buy_now")}</button>
+              </div>
+            </div>
+          `}).join("");
     }
 
-    /* ================= فتح نموذج الطلب ================= */
+    /* ================= نموذج الطلب ================= */
     function openOrderForm(id){
-      const p = PRODUCTS.find(x => x.id === id);
-      if(!p) return;
-      currentProduct = p;
-      const img = p.image_url ? `<img src="${p.image_url}" style="width:120px;height:120px;object-fit:cover;border-radius:14px;margin:auto;border:2px solid var(--gold);">` : `<div style="font-size:3.5rem;">${p.emoji||"📦"}</div>`;
-      document.getElementById("orderProductPreview").innerHTML = `
-        ${img}
-        <h4 style="margin-top:10px;color:#f5f5f5;">${p.name}</h4>
-        <div style="color:var(--gold);font-weight:900;font-size:1.3rem;">${Number(p.price).toLocaleString()} DZD</div>
-      `;
-      document.getElementById("cQty").value = 1;
-      renderOrderSummary();
-      closeAll();
-      document.getElementById("overlay").classList.add("open");
-      document.getElementById("orderPanel").classList.add("open");
+        const p = PRODUCTS.find(x => x.id === id);
+        if(!p) return;
+        currentProduct = p;
+        const img = p.image_url ? `<img src="${p.image_url}" style="width:120px;height:120px;object-fit:cover;border-radius:14px;margin:auto;border:2px solid var(--gold);">` : `<div style="font-size:3.5rem;">📦</div>`;
+        document.getElementById("orderProductPreview").innerHTML = `
+            ${img}
+            <h4 style="margin-top:10px;color:#f5f5f5;">${p.name}</h4>
+            <div style="color:var(--gold);font-weight:900;font-size:1.3rem;">${Number(p.price).toLocaleString()} DZD</div>
+        `;
+        document.getElementById("cQty").value = 1;
+        renderOrderSummary();
+        closeAll();
+        document.getElementById("overlay").classList.add("open");
+        document.getElementById("orderPanel").classList.add("open");
     }
 
-    /* ================= الولايات والبلديات ================= */
     function fillWilayas(){
-      const select = document.getElementById("cWilaya");
-      select.innerHTML = `<option value="">${t("f_wilaya_choose")}</option>`;
-      Object.keys(WILAYAS_DATA).forEach(w => {
-        const opt = document.createElement("option");
-        opt.value = w; opt.textContent = w;
-        select.appendChild(opt);
-      });
+        const select = document.getElementById("cWilaya");
+        select.innerHTML = `<option value="">${t("f_wilaya_choose")}</option>`;
+        Object.keys(WILAYAS_DATA).forEach(w => {
+            const opt = document.createElement("option");
+            opt.value = w; opt.textContent = w;
+            select.appendChild(opt);
+        });
     }
 
     function onWilayaChange(){
-      const wilaya = document.getElementById("cWilaya").value;
-      const communeField = document.getElementById("communeField");
-      const communeSelect = document.getElementById("cCommune");
-      if(!wilaya){
-        communeField.style.display = "none";
+        const wilaya = document.getElementById("cWilaya").value;
+        const communeField = document.getElementById("communeField");
+        const communeSelect = document.getElementById("cCommune");
+        if(!wilaya){
+            communeField.style.display = "none";
+            renderOrderSummary();
+            return;
+        }
+        communeSelect.innerHTML = `<option value="">${t("f_commune_choose")}</option>`;
+        (WILAYAS_DATA[wilaya] || []).forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c; opt.textContent = c;
+            communeSelect.appendChild(opt);
+        });
+        communeField.style.display = "block";
         renderOrderSummary();
-        return;
-      }
-      communeSelect.innerHTML = `<option value="">${t("f_commune_choose")}</option>`;
-      (WILAYAS_DATA[wilaya] || []).forEach(c => {
-        const opt = document.createElement("option");
-        opt.value = c; opt.textContent = c;
-        communeSelect.appendChild(opt);
-      });
-      communeField.style.display = "block";
-      renderOrderSummary();
     }
 
-    /* ================= ملخص الطلب ================= */
     function calcTotals(){
-      if(!currentProduct) return { subtotal:0, shipping:0, total:0 };
-      const qty = Number(document.getElementById("cQty").value) || 1;
-      const subtotal = currentProduct.price * qty;
-      const shipping = subtotal >= 10000 ? 0 : 500;
-      return { subtotal, shipping, total: subtotal + shipping, qty };
+        if(!currentProduct) return { subtotal:0, shipping:0, total:0 };
+        const qty = Number(document.getElementById("cQty").value) || 1;
+        const wilaya = document.getElementById("cWilaya").value;
+        const deliveryType = document.getElementById("cDelivery").value;
+        const subtotal = currentProduct.price * qty;
+        let shipping = 0;
+        if(wilaya && DELIVERY_PRICES[wilaya]) {
+            shipping = deliveryType === "home" ? DELIVERY_PRICES[wilaya].home : DELIVERY_PRICES[wilaya].office;
+        }
+        return { subtotal, shipping, total: subtotal + shipping, qty };
     }
 
     function renderOrderSummary(){
-      if(!currentProduct) return;
-      const { subtotal, shipping, total, qty } = calcTotals();
-      document.getElementById("orderSummary").innerHTML = `
-        <div class="row"><span>${currentProduct.name} × ${qty}</span><span>${subtotal.toLocaleString()} DZD</span></div>
-        <div class="row"><span>${t("shipping_label")}</span><span>${shipping === 0 ? t("shipping_free") : shipping + " DZD"}</span></div>
-        <div class="row total"><span>${t("total_label")}</span><span>${total.toLocaleString()} DZD</span></div>
-      `;
+        if(!currentProduct) return;
+        const { subtotal, shipping, total, qty } = calcTotals();
+        const deliveryType = document.getElementById("cDelivery").value;
+        const deliveryLabel = deliveryType === "home" ? t("delivery_home") : t("delivery_office");
+        document.getElementById("orderSummary").innerHTML = `
+            <div class="row"><span>${currentProduct.name} × ${qty}</span><span>${subtotal.toLocaleString()} DZD</span></div>
+            <div class="row"><span>${deliveryLabel}</span><span>${shipping.toLocaleString()} DZD</span></div>
+            <div class="row total"><span>${t("total_label")}</span><span>${total.toLocaleString()} DZD</span></div>
+        `;
     }
 
-    /* ================= إرسال الطلب ================= */
     async function submitOrder(e){
-      e.preventDefault();
-      const btn = document.getElementById("submitBtn");
-      btn.disabled = true; btn.textContent = "⏳...";
+        e.preventDefault();
+        const btn = document.getElementById("submitBtn");
+        btn.disabled = true; btn.textContent = "⏳...";
 
-      const name = document.getElementById("cName").value.trim();
-      const phone = document.getElementById("cPhone").value.trim();
-      const wilaya = document.getElementById("cWilaya").value;
-      const commune = document.getElementById("cCommune").value;
-      const address = document.getElementById("cAddress").value.trim();
-      const qty = Number(document.getElementById("cQty").value) || 1;
+        const name = document.getElementById("cName").value.trim();
+        const phone = document.getElementById("cPhone").value.trim();
+        const wilaya = document.getElementById("cWilaya").value;
+        const commune = document.getElementById("cCommune").value;
+        const address = document.getElementById("cAddress").value.trim();
+        const deliveryType = document.getElementById("cDelivery").value;
+        const qty = Number(document.getElementById("cQty").value) || 1;
 
-      if(!wilaya || !commune){
-        showToast(t("willaya_required"));
+        if(!wilaya || !commune){
+            showToast(t("willaya_required"));
+            btn.disabled = false; btn.textContent = t("submit_order");
+            return;
+        }
+
+        const { subtotal, shipping, total } = calcTotals();
+        const orderId = "DZ-" + Date.now().toString().slice(-6);
+        const deliveryLabel = deliveryType === "home" ? t("delivery_home") : t("delivery_office");
+
+        const order = {
+            id: orderId,
+            customer: { name, phone, wilaya, commune, address },
+            product: { id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, qty },
+            deliveryType: deliveryLabel,
+            subtotal, shipping, total,
+            status: "قيد المراجعة",
+            date: new Date().toLocaleString("ar-DZ")
+        };
+
+        // حفظ الطلب محلياً (لأننا لم ننشئ جدول طلبات في Appwrite بعد)
+        ORDERS.push(order);
+        localStorage.setItem("abdou_orders", JSON.stringify(ORDERS));
+
+        sendToWhatsApp(order);
+
+        closeAll();
+        document.getElementById("successOrderId").textContent = orderId;
+        document.getElementById("overlay").classList.add("open");
+        document.getElementById("successPanel").classList.add("open");
+
+        document.getElementById("orderForm").reset();
+        document.getElementById("communeField").style.display = "none";
         btn.disabled = false; btn.textContent = t("submit_order");
-        return;
-      }
-
-      const { subtotal, shipping, total } = calcTotals();
-      const orderId = "DZ-" + Date.now().toString().slice(-6);
-
-      const order = {
-        id: orderId,
-        customer: { name, phone, wilaya, commune, address },
-        product: { id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, qty },
-        subtotal, shipping, total,
-        status: "قيد المراجعة",
-        date: new Date().toLocaleString("ar-DZ")
-      };
-
-      try{
-        await sb.from("orders").insert({
-          id: orderId, customer_name: name, customer_phone: phone,
-          wilaya, address: `${commune} - ${address}`,
-          payment_method: "COD",
-          items: [order.product],
-          subtotal, shipping, total,
-          status: "قيد المراجعة"
-        });
-      }catch(err){ console.error("Order insert error:", err); }
-
-      const orders = JSON.parse(localStorage.getItem("abdou_orders") || "[]");
-      orders.push(order);
-      localStorage.setItem("abdou_orders", JSON.stringify(orders));
-
-      lastOrder = order;
-      sendToWhatsApp(order);
-
-      closeAll();
-      document.getElementById("successOrderId").textContent = orderId;
-      document.getElementById("overlay").classList.add("open");
-      document.getElementById("successPanel").classList.add("open");
-
-      document.getElementById("orderForm").reset();
-      document.getElementById("communeField").style.display = "none";
-      btn.disabled = false; btn.textContent = t("submit_order");
     }
 
-    /* ================= واتساب ================= */
     function buildWhatsAppMessage(order){
-      const p = order.product;
-      let msg = `🛒 *طلب جديد — ABDOU DZ*\n━━━━━━━━━━━━━━━\n`;
-      msg += `🔖 ${order.id}\n👤 ${order.customer.name}\n📞 ${order.customer.phone}\n`;
-      msg += `📍 ${order.customer.wilaya} - ${order.customer.commune}\n🏠 ${order.customer.address}\n💳 COD\n`;
-      msg += `━━━━━━━━━━━━━━━\n📦 ${p.name} × ${p.qty} = ${(p.price*p.qty).toLocaleString()} DZD\n`;
-      msg += `━━━━━━━━━━━━━━━\n💰 *${order.total.toLocaleString()} DZD*\n🕒 ${order.date}`;
-      return msg;
+        const p = order.product;
+        let msg = `🛒 *طلب جديد — ABDOU DZ*\n━━━━━━━━━━━━━━━\n`;
+        msg += `🔖 ${order.id}\n👤 ${order.customer.name}\n📞 ${order.customer.phone}\n`;
+        msg += `📍 ${order.customer.wilaya} - ${order.customer.commune}\n🏠 ${order.customer.address}\n🚚 ${order.deliveryType}\n💳 COD\n`;
+        msg += `━━━━━━━━━━━━━━━\n📦 ${p.name} × ${p.qty} = ${(p.price*p.qty).toLocaleString()} DZD\n`;
+        msg += `━━━━━━━━━━━━━━━\n💰 *${order.total.toLocaleString()} DZD*\n🕒 ${order.date}`;
+        return msg;
     }
     function sendToWhatsApp(order){
-      const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(buildWhatsAppMessage(order))}`;
-      window.open(url, "_blank");
+        const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(buildWhatsAppMessage(order))}`;
+        window.open(url, "_blank");
     }
+    let lastOrder = null;
     function sendWhatsAppAgain(){ if(lastOrder) sendToWhatsApp(lastOrder); }
 
-    /* ================= التنقل ================= */
     function showTrack(){
-      document.getElementById("homeView").style.display = "none";
-      document.getElementById("trackView").style.display = "block";
-      window.scrollTo(0,0);
+        document.getElementById("homeView").style.display = "none";
+        document.getElementById("trackView").style.display = "block";
+        window.scrollTo(0,0);
     }
     function showHome(){
-      document.getElementById("homeView").style.display = "block";
-      document.getElementById("trackView").style.display = "none";
-      window.scrollTo(0,0);
+        document.getElementById("homeView").style.display = "block";
+        document.getElementById("trackView").style.display = "none";
+        window.scrollTo(0,0);
     }
 
-    /* ================= تتبع ================= */
     async function trackOrder(){
-      const input = document.getElementById("trackInput").value.trim().toUpperCase();
-      const result = document.getElementById("trackResult");
-      if(!input) return;
-      result.classList.add("show");
-      result.innerHTML = `<p>⏳...</p>`;
-
-      let o = null;
-      try{
-        const { data } = await sb.from("orders").select("*").eq("id", input).maybeSingle();
-        if(data) o = data;
-      }catch(e){ console.error(e); }
-
-      if(!o){
-        const orders = JSON.parse(localStorage.getItem("abdou_orders") || "[]");
-        const l = orders.find(x => x.id === input);
-        if(l) o = {
-          id:l.id, customer_name:l.customer.name, customer_phone:l.customer.phone,
-          wilaya:l.customer.wilaya, address:`${l.customer.commune} - ${l.customer.address}`,
-          payment_method:"COD", total:l.total, status:l.status, items:[l.product]
-        };
-      }
-
-      if(!o){
-        result.innerHTML = `<div class="status notfound">${t("order_not_found")}</div>
-          <p style="color:var(--gray);font-size:.9rem;">${t("order_not_found_sub")}</p>`;
-        return;
-      }
-
-      result.innerHTML = `
-        <div class="status">✅ ${o.status}</div>
-        <div class="line"><span>${t("order_id_label")}</span><strong>${o.id}</strong></div>
-        <div class="line"><span>${t("name_label")}</span><span>${o.customer_name}</span></div>
-        <div class="line"><span>${t("phone_label")}</span><span>${o.customer_phone}</span></div>
-        <div class="line"><span>${t("wilaya_label")}</span><span>${o.wilaya}</span></div>
-        <div class="line"><span>${t("total_label_short")}</span><strong style="color:var(--gold)">${Number(o.total).toLocaleString()} DZD</strong></div>
-      `;
+        const input = document.getElementById("trackInput").value.trim().toUpperCase();
+        const result = document.getElementById("trackResult");
+        if(!input) return;
+        result.classList.add("show");
+        result.innerHTML = `<p>⏳...</p>`;
+        const o = ORDERS.find(x => x.id === input);
+        if(!o){
+            result.innerHTML = `<div class="status notfound">${t("order_not_found")}</div>
+              <p style="color:var(--gray);font-size:.9rem;">${t("order_not_found_sub")}</p>`;
+            return;
+        }
+        result.innerHTML = `
+            <div class="status">✅ ${o.status}</div>
+            <div class="line"><span>${t("order_id_label")}</span><strong>${o.id}</strong></div>
+            <div class="line"><span>${t("name_label")}</span><span>${o.customer.name}</span></div>
+            <div class="line"><span>${t("phone_label")}</span><span>${o.customer.phone}</span></div>
+            <div class="line"><span>${t("wilaya_label")}</span><span>${o.customer.wilaya}</span></div>
+            <div class="line"><span>${t("total_label_short")}</span><strong style="color:var(--gold)">${Number(o.total).toLocaleString()} DZD</strong></div>
+        `;
     }
 
     /* ================= لوحة الأدمن ================= */
     function openAdminLogin(){
-      closeAll();
-      document.getElementById("overlay").classList.add("open");
-      document.getElementById("adminLogin").classList.add("open");
-      document.getElementById("adminPass").value = "";
-      setTimeout(() => document.getElementById("adminPass").focus(), 150);
+        closeAll();
+        document.getElementById("overlay").classList.add("open");
+        document.getElementById("adminLogin").classList.add("open");
+        document.getElementById("adminPass").value = "";
+        setTimeout(() => document.getElementById("adminPass").focus(), 150);
     }
 
     function checkAdmin(){
-      if(document.getElementById("adminPass").value === getAdminPassword()){
-        closeAll();
-        document.getElementById("overlay").classList.add("open");
-        document.getElementById("adminPanel").classList.add("open");
-        loadAdminData();
-        
-        document.getElementById("currentPass").value = "";
-        document.getElementById("newPass").value = "";
-
-        const preview = document.getElementById("logoPickerPreview");
-        if(currentLogoUrl){ preview.src = currentLogoUrl; preview.classList.add("show"); }
-        else preview.classList.remove("show");
-        showToast("✅ " + t("admin_title"), "success");
-      } else {
-        showToast(t("admin_wrong"));
-      }
+        if(document.getElementById("adminPass").value === getAdminPassword()){
+            closeAll();
+            document.getElementById("overlay").classList.add("open");
+            document.getElementById("adminPanel").classList.add("open");
+            loadAdminData();
+            document.getElementById("currentPass").value = "";
+            document.getElementById("newPass").value = "";
+            const preview = document.getElementById("logoPickerPreview");
+            if(currentLogoUrl){ preview.src = currentLogoUrl; preview.classList.add("show"); }
+            else preview.classList.remove("show");
+            loadDeliverySettings();
+            loadColors();
+            showToast("✅ " + t("admin_title"), "success");
+        } else {
+            showToast(t("admin_wrong"));
+        }
     }
 
     function changeAdminPassword() {
         const current = document.getElementById("currentPass").value;
         const newPass = document.getElementById("newPass").value;
-
         if (current !== getAdminPassword()) {
             showToast("❌ كلمة السر الحالية غير صحيحة");
             return;
         }
-
         if (newPass.length < 4) {
             showToast("⚠️ كلمة السر الجديدة يجب أن تكون 4 أحرف على الأقل");
             return;
         }
-
         localStorage.setItem("abdou_admin_pass", newPass);
-        
         document.getElementById("currentPass").value = "";
         document.getElementById("newPass").value = "";
         showToast("✅ تم تغيير كلمة السر بنجاح", "success");
     }
 
     function switchAdminTab(tab, el){
-      document.querySelectorAll(".admin-tab").forEach(x => x.classList.remove("active"));
-      document.querySelectorAll(".admin-tab-content").forEach(x => x.classList.remove("active"));
-      el.classList.add("active");
-      document.getElementById("tab-" + tab).classList.add("active");
+        document.querySelectorAll(".admin-tab").forEach(x => x.classList.remove("active"));
+        document.querySelectorAll(".admin-tab-content").forEach(x => x.classList.remove("active"));
+        el.classList.add("active");
+        document.getElementById("tab-" + tab).classList.add("active");
     }
 
-    async function loadAdminData(){
-      try{
-        const { data } = await sb.from("products").select("*").order("id", {ascending:false});
-        PRODUCTS = data || [];
-        renderProducts(); renderAdminProducts();
-      }catch(e){ console.error(e); }
-      try{
-        const { data } = await sb.from("orders").select("*").order("created_at", {ascending:false});
-        ORDERS = data || [];
+    function loadAdminData(){
+        renderAdminProducts();
         renderAdminOrders();
-      }catch(e){ console.error(e); }
     }
 
     function renderAdminProducts(){
-      const box = document.getElementById("adminProductsList");
-      if(!box) return;
-      if(!PRODUCTS.length){
-        box.innerHTML = `<p style="text-align:center;color:var(--gray);">${t("admin_no_products")}</p>`;
-        return;
-      }
-      box.innerHTML = PRODUCTS.map(p => {
-        const thumb = p.image_url ? `<img src="${p.image_url}">` : (p.emoji || "📦");
-        return `
-        <div class="admin-product">
-          <div class="pinfo">
-            <div class="pthumb">${thumb}</div>
-            <div>
-              <h4>${p.name}</h4>
-              <span>${Number(p.price).toLocaleString()} DZD</span>
+        const box = document.getElementById("adminProductsList");
+        if(!box) return;
+        if(!PRODUCTS.length){
+            box.innerHTML = `<p style="text-align:center;color:var(--gray);">${t("admin_no_products")}</p>`;
+            return;
+        }
+        box.innerHTML = PRODUCTS.map(p => {
+            const thumb = p.image_url ? `<img src="${p.image_url}">` : (p.emoji || "📦");
+            return `
+            <div class="admin-product">
+              <div class="pinfo">
+                <div class="pthumb">${thumb}</div>
+                <div>
+                  <h4>${p.name}</h4>
+                  <span>${Number(p.price).toLocaleString()} DZD</span>
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn-sm btn-edit" onclick="editProduct('${p.id}')">${t("admin_edit")}</button>
+                <button class="btn-sm btn-del" onclick="deleteProduct('${p.id}')">${t("admin_del")}</button>
+              </div>
             </div>
-          </div>
-          <div class="actions">
-            <button class="btn-sm btn-edit" onclick="editProduct(${p.id})">${t("admin_edit")}</button>
-            <button class="btn-sm btn-del" onclick="deleteProduct(${p.id})">${t("admin_del")}</button>
-          </div>
-        </div>
-      `}).join("");
+          `}).join("");
     }
 
     function renderAdminOrders(){
-      const box = document.getElementById("adminOrdersList");
-      if(!box) return;
-      if(!ORDERS.length){
-        box.innerHTML = `<p style="text-align:center;color:var(--gray);">${t("admin_no_orders")}</p>`;
-        return;
-      }
-      box.innerHTML = ORDERS.map(o => `
-        <div class="admin-product" style="flex-direction:column;align-items:stretch;">
-          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
-            <strong style="color:var(--gold);">${o.id}</strong>
-            <select onchange="updateOrderStatus('${o.id}', this.value)" style="padding:6px 10px;border-radius:8px;background:var(--black);color:#f5f5f5;border:1px solid var(--border);font-family:inherit;font-size:.85rem;">
-              <option value="قيد المراجعة" ${o.status==="قيد المراجعة"?"selected":""}>قيد المراجعة</option>
-              <option value="تم الشحن" ${o.status==="تم الشحن"?"selected":""}>تم الشحن</option>
-              <option value="تم التسليم" ${o.status==="تم التسليم"?"selected":""}>تم التسليم</option>
-              <option value="ملغي" ${o.status==="ملغي"?"selected":""}>ملغي</option>
-            </select>
-          </div>
-          <div style="font-size:.85rem;color:var(--gray);margin-top:8px;line-height:1.8;">
-            👤 ${o.customer_name} — 📞 ${o.customer_phone}<br>
-            📍 ${o.wilaya} — ${o.address||""}<br>
-            💰 <strong style="color:var(--gold);">${Number(o.total).toLocaleString()} DZD</strong>
-          </div>
-        </div>
-      `).join("");
+        const box = document.getElementById("adminOrdersList");
+        if(!box) return;
+        if(!ORDERS.length){
+            box.innerHTML = `<p style="text-align:center;color:var(--gray);">${t("admin_no_orders")}</p>`;
+            return;
+        }
+        box.innerHTML = ORDERS.map(o => `
+            <div class="admin-product" style="flex-direction:column;align-items:stretch;">
+              <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+                <strong style="color:var(--gold);">${o.id}</strong>
+                <select onchange="updateOrderStatus('${o.id}', this.value)" style="padding:6px 10px;border-radius:8px;background:var(--black);color:#f5f5f5;border:1px solid var(--border);font-family:inherit;font-size:.85rem;">
+                  <option value="قيد المراجعة" ${o.status==="قيد المراجعة"?"selected":""}>قيد المراجعة</option>
+                  <option value="تم الشحن" ${o.status==="تم الشحن"?"selected":""}>تم الشحن</option>
+                  <option value="تم التسليم" ${o.status==="تم التسليم"?"selected":""}>تم التسليم</option>
+                  <option value="ملغي" ${o.status==="ملغي"?"selected":""}>ملغي</option>
+                </select>
+              </div>
+              <div style="font-size:.85rem;color:var(--gray);margin-top:8px;line-height:1.8;">
+                👤 ${o.customer.name} — 📞 ${o.customer.phone}<br>
+                📍 ${o.customer.wilaya} — ${o.customer.address||""}<br>
+                🚚 ${o.deliveryType || ""}<br>
+                💰 <strong style="color:var(--gold);">${Number(o.total).toLocaleString()} DZD</strong>
+              </div>
+            </div>
+          `).join("");
     }
 
     function showProductForm(){
-      editingProductId = null;
-      uploadedImageUrl = null;
-      document.getElementById("pName").value = "";
-      document.getElementById("pPrice").value = "";
-      document.getElementById("pImageInput").value = "";
-      const preview = document.getElementById("pImagePreview");
-      preview.classList.remove("show"); preview.src = "";
-      document.getElementById("adminProductForm").style.display = "block";
+        editingProductId = null;
+        uploadedImageUrl = null;
+        document.getElementById("pName").value = "";
+        document.getElementById("pPrice").value = "";
+        document.getElementById("pImageInput").value = "";
+        const preview = document.getElementById("pImagePreview");
+        preview.classList.remove("show"); preview.src = "";
+        document.getElementById("adminProductForm").style.display = "block";
     }
     function hideProductForm(){
-      document.getElementById("adminProductForm").style.display = "none";
-      editingProductId = null; uploadedImageUrl = null;
+        document.getElementById("adminProductForm").style.display = "none";
+        editingProductId = null; uploadedImageUrl = null;
     }
     function editProduct(id){
-      const p = PRODUCTS.find(x => x.id === id);
-      if(!p) return;
-      editingProductId = id;
-      uploadedImageUrl = p.image_url || null;
-      document.getElementById("pName").value = p.name;
-      document.getElementById("pPrice").value = p.price;
-      const preview = document.getElementById("pImagePreview");
-      if(p.image_url){ preview.src = p.image_url; preview.classList.add("show"); }
-      else preview.classList.remove("show");
-      document.getElementById("adminProductForm").style.display = "block";
+        const p = PRODUCTS.find(x => x.id === id);
+        if(!p) return;
+        editingProductId = id;
+        uploadedImageUrl = p.image_url || null;
+        document.getElementById("pName").value = p.name;
+        document.getElementById("pPrice").value = p.price;
+        const preview = document.getElementById("pImagePreview");
+        if(p.image_url){ preview.src = p.image_url; preview.classList.add("show"); }
+        else preview.classList.remove("show");
+        document.getElementById("adminProductForm").style.display = "block";
     }
     function previewImage(e){
-      const file = e.target.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        const preview = document.getElementById("pImagePreview");
-        preview.src = ev.target.result;
-        preview.classList.add("show");
-      };
-      reader.readAsDataURL(file);
-    }
-    
-    async function uploadImage(file){
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const ext = file.name.split(".").pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-        
-        const { data, error } = await sb.storage.from(STORAGE_BUCKET).upload(fileName, arrayBuffer, {
-          contentType: file.type,
-          cacheControl: "3600", 
-          upsert: false
-        });
-        
-        if(error) throw error;
-        
-        const { data: urlData } = sb.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
-        return urlData.publicUrl;
-      } catch (err) {
-        console.error("Upload Error Details:", err);
-        throw err;
-      }
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const preview = document.getElementById("pImagePreview");
+            preview.src = ev.target.result;
+            preview.classList.add("show");
+        };
+        reader.readAsDataURL(file);
     }
 
     async function saveProduct(){
-      const name = document.getElementById("pName").value.trim();
-      const price = Number(document.getElementById("pPrice").value);
-      const fileInput = document.getElementById("pImageInput");
-      const file = fileInput.files[0];
-      if(!name || !price){ showToast("⚠️"); return; }
-      const btn = document.getElementById("pSaveBtn");
-      btn.disabled = true;
-      try{
-        let imageUrl = uploadedImageUrl;
-        if(file){ btn.textContent = t("loading_upload"); imageUrl = await uploadImage(file); }
-        const payload = { name, price, image_url: imageUrl, emoji: null, active: true };
-        if(editingProductId){
-          const { error } = await sb.from("products").update(payload).eq("id", editingProductId);
-          if(error) throw error;
-          showToast(t("product_updated"), "success");
-        } else {
-          const { error } = await sb.from("products").insert(payload);
-          if(error) throw error;
-          showToast(t("product_added"), "success");
+        const name = document.getElementById("pName").value.trim();
+        const price = Number(document.getElementById("pPrice").value);
+        const fileInput = document.getElementById("pImageInput");
+        const file = fileInput.files[0];
+        if(!name || !price){ showToast("⚠️"); return; }
+        const btn = document.getElementById("pSaveBtn");
+        btn.disabled = true;
+
+        try{
+            let imageId = null;
+
+            // رفع الصورة إلى Appwrite Storage
+            if(file){
+                btn.textContent = t("loading_upload");
+                const uploadedFile = await storage.createFile(BUCKET_ID, ID.unique(), file);
+                imageId = uploadedFile.$id;
+            }
+
+            if(editingProductId){
+                await databases.updateDocument(DATABASE_ID, TABLE_ID, editingProductId, {
+                    name: name,
+                    price: price,
+                    ...(imageId && { image_id: imageId })
+                });
+                showToast(t("product_updated"), "success");
+            } else {
+                await databases.createDocument(DATABASE_ID, TABLE_ID, ID.unique(), {
+                    name: name,
+                    price: price,
+                    image_id: imageId,
+                    active: true
+                });
+                showToast(t("product_added"), "success");
+            }
+
+            hideProductForm();
+            loadProducts(); // تحديث القائمة
+            loadAdminData();
+        }catch(e){
+            console.error("Save Error:", e);
+            showToast(t("upload_failed") + " " + e.message);
+        }finally{
+            btn.disabled = false;
+            btn.textContent = t("admin_save");
         }
-        hideProductForm();
-        await loadAdminData();
-      }catch(e){
-        console.error(e);
-        showToast(t("upload_failed") + " " + e.message);
-      }finally{
-        btn.disabled = false;
-        btn.textContent = t("admin_save");
-      }
     }
+
     async function deleteProduct(id){
-      if(!confirm(t("admin_confirm_del"))) return;
-      try{
-        const { error } = await sb.from("products").delete().eq("id", id);
-        if(error) throw error;
-        showToast(t("product_deleted"), "success");
-        await loadAdminData();
-      }catch(e){ console.error(e); showToast("❌ " + e.message); }
+        if(!confirm(t("admin_confirm_del"))) return;
+        try {
+            await databases.deleteDocument(DATABASE_ID, TABLE_ID, id);
+            showToast(t("product_deleted"), "success");
+            loadProducts();
+            loadAdminData();
+        } catch(e) {
+            console.error(e);
+            showToast("❌ " + e.message);
+        }
     }
-    async function updateOrderStatus(id, status){
-      try{
-        const { error } = await sb.from("orders").update({ status }).eq("id", id);
-        if(error) throw error;
-        showToast("✅ " + status, "success");
-      }catch(e){ console.error(e); showToast("❌ " + e.message); }
+
+    function updateOrderStatus(id, status){
+        const index = ORDERS.findIndex(o => o.id === id);
+        if(index !== -1) {
+            ORDERS[index].status = status;
+            localStorage.setItem("abdou_orders", JSON.stringify(ORDERS));
+            showToast("✅ " + status, "success");
+        }
     }
 
     /* ================= فتح/إغلاق ================= */
     function closeAll(){
-      document.getElementById("overlay").classList.remove("open");
-      document.querySelectorAll(".panel").forEach(p => p.classList.remove("open"));
+        document.getElementById("overlay").classList.remove("open");
+        document.querySelectorAll(".panel").forEach(p => p.classList.remove("open"));
     }
 
     /* ================= Toast ================= */
     let toastTimer;
     function showToast(msg, type){
-      const el = document.getElementById("toast");
-      el.textContent = msg;
-      el.className = "toast show" + (type ? " " + type : "");
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
+        const el = document.getElementById("toast");
+        el.textContent = msg;
+        el.className = "toast show" + (type ? " " + type : "");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
     }
 
     /* ================= تشغيل ================= */
     applyLang();
     fillWilayas();
     loadLogo();
+    loadColors();
     loadProducts();
 </script>
 </body>

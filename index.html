@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ABDOU DZ | الفخامة الذهبية</title>
     <link id="faviconLink" rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>">
-    <!-- استيراد مكتبة Appwrite -->
-    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root{
           --gold:#d4af37;
@@ -632,30 +631,22 @@
 <div class="toast" id="toast"></div>
 
 <script>
-    /* ================= إعدادات Appwrite ================= */
-    const APPWRITE_ENDPOINT = 'https://nyc.cloud.appwrite.io/v1';
-    const APPWRITE_PROJECT_ID = '6adae74a000825db0ff4';
-    // تم إزالة المفتاح السري لحل مشكلة الشاشة السوداء والاعتماد على الصلاحيات العامة
-     const DATABASE_ID = '6adae7e4003b77bb09a2';
-    const TABLE_ID = '6adae81900276d7c4952';
-    const BUCKET_ID = '6adaea980004b9c6b1fa';
-
-    // تهيئة Appwrite
-    const { Client, Databases, Storage, ID, Query } = Appwrite;
-    const client = new Client()
-        .setEndpoint(APPWRITE_ENDPOINT)
-        .setProject(APPWRITE_PROJECT_ID);
-
-    const databases = new Databases(client);
-    const storage = new Storage(client);
-
-    /* ================= باقي الكود (الترجمة، الولايات، إلخ) ================= */
+    /* ================= الإعدادات ================= */
     const WHATSAPP_NUMBER = "213553893600";
 
+    const SUPABASE_URL = "https://xdgpcwtprppgvpekgiuw.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_tUeMxt2zY7mBN_P8IEtnMQ_9t5Vx97m";
+    const BUCKET_NAME = "products";
+
+    const { createClient } = supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    /* ================= إدارة كلمة السر ================= */
     function getAdminPassword() {
         return localStorage.getItem("abdou_admin_pass") || "abdou2026ms";
     }
 
+    /* ================= الترجمة ================= */
     const I18N = {
       ar:{
         nav_home:"الرئيسية",nav_products:"المنتجات",nav_track:"تتبع الطلب",nav_contact:"اتصل بنا",
@@ -883,8 +874,21 @@
     }
 
     /* ================= اللوغو ================= */
-    function loadLogo(){
-        applyLogo(currentLogoUrl);
+    async function loadLogo(){
+        try {
+            // جلب اللوغو من جدول products (الصف الوهمي)
+            const { data, error } = await sb.from('products').select('image_url').eq('name', '__LOGO__').maybeSingle();
+            if(data && data.image_url) {
+                currentLogoUrl = data.image_url;
+                applyLogo(data.image_url);
+            } else {
+                // إذا لم يوجد في Supabase، جرب الذاكرة المحلية (احتياطي)
+                applyLogo(localStorage.getItem("abdou_logo") || null);
+            }
+        } catch (e) {
+            console.log("No logo found in Supabase, using local.", e);
+            applyLogo(localStorage.getItem("abdou_logo") || null);
+        }
     }
 
     function applyLogo(url){
@@ -915,7 +919,7 @@
         reader.readAsDataURL(file);
     }
 
-    function saveLogo(){
+    async function saveLogo(){
         if(!pendingLogoFile){
             if(!currentLogoUrl){ showToast("⚠️"); return; }
             applyLogo(currentLogoUrl);
@@ -923,17 +927,45 @@
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            const base64 = ev.target.result;
-            localStorage.setItem("abdou_logo", base64);
-            currentLogoUrl = base64;
-            applyLogo(base64);
+        const btn = document.getElementById("logoSaveBtn");
+        btn.disabled = true;
+        btn.textContent = t("loading_upload");
+
+        try {
+            // 1. رفع صورة اللوغو إلى Supabase Storage
+            const fileExt = pendingLogoFile.name.split('.').pop();
+            const fileName = `logo_${Date.now()}.${fileExt}`;
+            const { data: uploadData, error: uploadError } = await sb.storage.from(BUCKET_NAME).upload(fileName, pendingLogoFile);
+            if (uploadError) throw uploadError;
+
+            // 2. الحصول على الرابط العام
+            const { data: urlData } = sb.storage.from(BUCKET_NAME).getPublicUrl(fileName);
+            const logoUrl = urlData.publicUrl;
+
+            // 3. حفظ الرابط في قاعدة البيانات (نستخدم جدول products بصف وهمي)
+            const { data: existing } = await sb.from('products').select('id').eq('name', '__LOGO__').maybeSingle();
+
+            if (existing) {
+                await sb.from('products').update({ image_url: logoUrl }).eq('id', existing.id);
+            } else {
+                await sb.from('products').insert({ name: '__LOGO__', price: 0, image_url: logoUrl, active: false });
+            }
+
+            // 4. تحديث الواجهة
+            localStorage.setItem("abdou_logo", logoUrl);
+            currentLogoUrl = logoUrl;
+            applyLogo(logoUrl);
             pendingLogoFile = null;
             document.getElementById("logoInput").value = "";
             showToast(t("logo_saved"), "success");
-        };
-        reader.readAsDataURL(pendingLogoFile);
+
+        } catch (e) {
+            console.error(e);
+            showToast(t("upload_failed") + " " + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = t("admin_save_logo");
+        }
     }
 
     function removeLogo(){
@@ -947,19 +979,18 @@
         showToast(t("logo_removed"), "success");
     }
 
-    /* ================= المنتجات (مع Appwrite) ================= */
+    /* ================= المنتجات (مع Supabase) ================= */
     async function loadProducts(){
         const grid = document.getElementById("productsGrid");
         grid.innerHTML = `<div class="loading">${t("loading_products")}</div>`;
         try {
-            const response = await databases.listDocuments(DATABASE_ID, TABLE_ID, [
-                Query.equal('active', true)
-            ]);
-            PRODUCTS = response.documents.map(doc => ({
-                id: doc.$id,
+            const { data, error } = await sb.from('products').select('*').eq('active', true).neq('name', '__LOGO__');
+            if (error) throw error;
+            PRODUCTS = data.map(doc => ({
+                id: doc.id,
                 name: doc.name,
                 price: doc.price,
-                image_url: doc.image_id ? storage.getFileView(BUCKET_ID, doc.image_id).href : null
+                image_url: doc.image_url
             }));
             renderProducts();
         } catch (error) {
@@ -991,7 +1022,7 @@
 
     /* ================= نموذج الطلب ================= */
     function openOrderForm(id){
-        const p = PRODUCTS.find(x => x.id === id);
+        const p = PRODUCTS.find(x => x.id == id);
         if(!p) return;
         currentProduct = p;
         const img = p.image_url ? `<img src="${p.image_url}" style="width:120px;height:120px;object-fit:cover;border-radius:14px;margin:auto;border:2px solid var(--gold);">` : `<div style="font-size:3.5rem;">📦</div>`;
@@ -1094,7 +1125,6 @@
             date: new Date().toLocaleString("ar-DZ")
         };
 
-        // حفظ الطلب محلياً (لأننا لم ننشئ جدول طلبات في Appwrite بعد)
         ORDERS.push(order);
         localStorage.setItem("abdou_orders", JSON.stringify(ORDERS));
 
@@ -1285,34 +1315,17 @@
         editingProductId = null; uploadedImageUrl = null;
     }
     function editProduct(id){
-    // 1. البحث عن المنتج في القائمة المحلية
-    const p = PRODUCTS.find(x => x.id === id);
-
-    // 2. إذا لم يتم العثور على المنتج، أظهر رسالة وقم بتحديث القائمة
-    if(!p) {
-        showToast("⚠️ هذا المنتج لم يعد موجوداً، جاري تحديث القائمة...", "error");
-        loadProducts(); // إعادة تحميل المنتجات من Appwrite
-        loadAdminData(); // تحديث لوحة التحكم
-        return;
+        const p = PRODUCTS.find(x => x.id == id);
+        if(!p) return;
+        editingProductId = id;
+        uploadedImageUrl = p.image_url || null;
+        document.getElementById("pName").value = p.name;
+        document.getElementById("pPrice").value = p.price;
+        const preview = document.getElementById("pImagePreview");
+        if(p.image_url){ preview.src = p.image_url; preview.classList.add("show"); }
+        else preview.classList.remove("show");
+        document.getElementById("adminProductForm").style.display = "block";
     }
-
-    // 3. إذا كان المنتج موجوداً، املأ الحقول
-    editingProductId = id;
-    uploadedImageUrl = p.image_url || null;
-    document.getElementById("pName").value = p.name;
-    document.getElementById("pPrice").value = p.price;
-
-    const preview = document.getElementById("pImagePreview");
-    if(p.image_url){
-        preview.src = p.image_url;
-        preview.classList.add("show");
-    } else {
-        preview.classList.remove("show");
-    }
-
-    // 4. إظهار نموذج التعديل
-    document.getElementById("adminProductForm").style.display = "block";
-}
     function previewImage(e){
         const file = e.target.files[0];
         if(!file) return;
@@ -1325,6 +1338,20 @@
         reader.readAsDataURL(file);
     }
 
+    async function uploadImage(file){
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}.${fileExt}`;
+            const { data, error } = await sb.storage.from(BUCKET_NAME).upload(fileName, file);
+            if (error) throw error;
+            const { data: urlData } = sb.storage.from(BUCKET_NAME).getPublicUrl(fileName);
+            return urlData.publicUrl;
+        } catch (err) {
+            console.error("Upload Error Details:", err);
+            throw err;
+        }
+    }
+
     async function saveProduct(){
         const name = document.getElementById("pName").value.trim();
         const price = Number(document.getElementById("pPrice").value);
@@ -1335,34 +1362,33 @@
         btn.disabled = true;
 
         try{
-            let imageId = null;
-
-            // رفع الصورة إلى Appwrite Storage
+            let imageUrl = uploadedImageUrl;
             if(file){
                 btn.textContent = t("loading_upload");
-                const uploadedFile = await storage.createFile(BUCKET_ID, ID.unique(), file);
-                imageId = uploadedFile.$id;
+                imageUrl = await uploadImage(file);
             }
 
             if(editingProductId){
-                await databases.updateDocument(DATABASE_ID, TABLE_ID, editingProductId, {
+                const { error } = await sb.from('products').update({
                     name: name,
                     price: price,
-                    ...(imageId && { image_id: imageId })
-                });
+                    image_url: imageUrl
+                }).eq('id', editingProductId);
+                if(error) throw error;
                 showToast(t("product_updated"), "success");
             } else {
-                await databases.createDocument(DATABASE_ID, TABLE_ID, ID.unique(), {
+                const { error } = await sb.from('products').insert({
                     name: name,
                     price: price,
-                    image_id: imageId,
+                    image_url: imageUrl,
                     active: true
                 });
+                if(error) throw error;
                 showToast(t("product_added"), "success");
             }
 
             hideProductForm();
-            loadProducts(); // تحديث القائمة
+            loadProducts();
             loadAdminData();
         }catch(e){
             console.error("Save Error:", e);
@@ -1376,7 +1402,8 @@
     async function deleteProduct(id){
         if(!confirm(t("admin_confirm_del"))) return;
         try {
-            await databases.deleteDocument(DATABASE_ID, TABLE_ID, id);
+            const { error } = await sb.from('products').delete().eq('id', id);
+            if(error) throw error;
             showToast(t("product_deleted"), "success");
             loadProducts();
             loadAdminData();
@@ -1406,7 +1433,7 @@
     function showToast(msg, type){
         const el = document.getElementById("toast");
         el.textContent = msg;
-        el.className = "toast show"+ (type ? " " + type : "");
+        el.className = "toast show" + (type ? " " + type : "");
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
     }

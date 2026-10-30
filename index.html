@@ -1216,7 +1216,7 @@ fbq('track', 'Purchase', { currency: 'DZD', value: total });
     }
 
     function checkAdmin(){
-        if(document.getElementById("adminPass").value === getAdminPassword()){
+        if(document.getElementById("adminPass").value === "1234"){
             closeAll();
             document.getElementById("overlay").classList.add("open");
             document.getElementById("adminPanel").classList.add("open");
